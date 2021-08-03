@@ -1,60 +1,52 @@
+import { useSpring, a } from "@react-spring/three";
 import { Canvas, useThree } from "@react-three/fiber";
-import { useDrag, useGesture } from "@use-gesture/react";
-import React, { useMemo, useState } from "react";
-import { BoxBufferGeometry, LineSegments, WireframeGeometry } from "three";
+import { useGesture } from "react-use-gesture";
+import React from "react";
 
-function Boxes({ z = 0 }: { z?: number }) {
+function Boxes() {
   const { size, viewport } = useThree();
   const aspect = size.width / viewport.width;
-  const [position, setPosition] = useState<[number, number, number]>([0, 0, z]);
-  const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
-  const [scale, setScale] = useState([1, 1, 1]);
-  const box = useMemo(() => {
-    const boxGeom = new BoxBufferGeometry(2, 2, 2);
-    const wireframe = new WireframeGeometry(boxGeom);
-    const lines = new LineSegments(wireframe);
-    return lines;
-  }, []);
+  const [spring, set] = useSpring(() => ({
+    scale: [1, 1, 1],
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    config: { friction: 10 },
+  }));
 
   const bind = useGesture({
     onDrag: ({ event, offset: [x, y] }) => {
       event.stopPropagation();
       if (event.shiftKey) {
-        setPosition([x / aspect, -y / aspect, 0]);
+        set.start({ position: [x / aspect, -y / aspect, 0] });
       } else {
-        setRotation([y / aspect, x / aspect, 0]);
+        set.start({ rotation: [y / aspect, x / aspect, 0] });
       }
     },
-    onHover: ({ hovering }) => setScale(hovering ? [1.2, 1.2, 1.2] : [1, 1, 1]),
+    onHover: ({ hovering }) =>
+      set.start({ scale: hovering ? [1.2, 1.2, 1.2] : [1, 1, 1] }),
   });
 
-  const isDragging = false;
-
   return (
-    <primitive
-      object={box}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      {...bind()}
-    >
-      <lineBasicMaterial
-        attach="material"
-        color={isDragging ? "red" : "white"}
-      />
-    </primitive>
+    <a.mesh position={[1, 1, 1]} {...(spring as any)} {...(bind() as any)}>
+      <dodecahedronBufferGeometry args={[1, 0]} />
+      <meshNormalMaterial />
+    </a.mesh>
   );
 }
 
 export function App() {
   return (
-    <Canvas
-      gl={{ alpha: false }}
-      frameloop="demand"
-      dpr={window.devicePixelRatio}
-    >
-      <ambientLight />
-      <pointLight position={[10, 10, 10]} />
+    <Canvas>
+      <ambientLight intensity={0.5} />
+      <spotLight
+        intensity={0.6}
+        position={[20, 10, 10]}
+        angle={0.2}
+        penumbra={1}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        castShadow
+      />
       <Boxes />
     </Canvas>
   );
