@@ -1,37 +1,43 @@
-import { Html, Line as DreiLine, useAspect } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import React, { useMemo, useState } from "react";
-import { Path, Vector3 } from "three";
+import { Canvas, useThree } from "@react-three/fiber";
+import { useDrag } from "@use-gesture/react";
+import React, { useState } from "react";
+import { useMemo } from "react";
+import { BoxBufferGeometry, LineSegments, WireframeGeometry } from "three";
 
-function Paths() {
-  const [isOver, setIsOver] = useState(false);
-  const [lineOver, setLineOver] = useState(false);
-  const points = useMemo(() => {
-    const p = new Path();
-    p.quadraticCurveTo(0.375, 0, 0.5, 0.5);
-    return p.getPoints(20).map((p) => new Vector3(p.x, p.y, 0));
+function Boxes({ z = 0 }: { z?: number }) {
+  const { viewport } = useThree();
+  const [position, setPosition] = useState<[number, number, number]>([0, 0, z]);
+  const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
+  const box = useMemo(() => {
+    const boxGeom = new BoxBufferGeometry(2, 2, 2);
+    const wireframe = new WireframeGeometry(boxGeom);
+    const lines = new LineSegments(wireframe);
+    return lines;
   }, []);
-  const scale = useAspect(window.innerWidth, window.innerHeight);
+
+  const bind = useDrag(({ event, offset: [x, y] }) => {
+    event.stopPropagation();
+    const aspect = viewport.getCurrentViewport().factor;
+    if (event.shiftKey) {
+      if (Math.abs(x) > Math.abs(y)) {
+        setRotation([x / 20, rotation[1], 0]);
+      } else {
+        setRotation([rotation[0], y / 20, 0]);
+      }
+    } else {
+      setPosition([x / aspect, -y / aspect, z]);
+    }
+  });
 
   return (
-    <group scale={[scale[1], scale[1], 1]}>
-      <mesh>
-        <DreiLine
-          points={points}
-          color={lineOver ? "red" : "white"}
-          lineWidth={10}
-          onPointerEnter={() => setLineOver(true)}
-          onPointerLeave={() => setLineOver(false)}
-        />
-      </mesh>
-      <mesh position={[0.25, 0, 0]} onPointerDown={() => setIsOver(!isOver)}>
-        <boxGeometry args={[0.25, 0.25, -1]} />
-        <meshBasicMaterial color={isOver ? "red" : "gray"} attach="material" />
-        <Html style={{ userSelect: "none", pointerEvents: "none" }}>
-          <h1>Hello</h1>
-        </Html>
-      </mesh>
-    </group>
+    <primitive
+      object={box}
+      position={position}
+      rotation={rotation}
+      {...(bind() as any)}
+    >
+      <lineBasicMaterial attach="material" />
+    </primitive>
   );
 }
 
@@ -40,10 +46,11 @@ export function App() {
     <Canvas
       gl={{ alpha: false }}
       frameloop="demand"
-      orthographic={true}
       dpr={window.devicePixelRatio}
     >
-      <Paths />
+      <ambientLight />
+      <pointLight position={[10, 10, 10]} />
+      <Boxes />
     </Canvas>
   );
 }
