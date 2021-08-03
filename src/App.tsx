@@ -1,13 +1,14 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { useDrag } from "@use-gesture/react";
-import React, { useState } from "react";
-import { useMemo } from "react";
+import { useDrag, useGesture } from "@use-gesture/react";
+import React, { useMemo, useState } from "react";
 import { BoxBufferGeometry, LineSegments, WireframeGeometry } from "three";
 
 function Boxes({ z = 0 }: { z?: number }) {
-  const { viewport } = useThree();
+  const { size, viewport } = useThree();
+  const aspect = size.width / viewport.width;
   const [position, setPosition] = useState<[number, number, number]>([0, 0, z]);
   const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
+  const [scale, setScale] = useState([1, 1, 1]);
   const box = useMemo(() => {
     const boxGeom = new BoxBufferGeometry(2, 2, 2);
     const wireframe = new WireframeGeometry(boxGeom);
@@ -15,28 +16,32 @@ function Boxes({ z = 0 }: { z?: number }) {
     return lines;
   }, []);
 
-  const bind = useDrag(({ event, offset: [x, y] }) => {
-    event.stopPropagation();
-    const aspect = viewport.getCurrentViewport().factor;
-    if (event.shiftKey) {
-      if (Math.abs(x) > Math.abs(y)) {
-        setRotation([x / 20, rotation[1], 0]);
+  const bind = useGesture({
+    onDrag: ({ event, offset: [x, y] }) => {
+      event.stopPropagation();
+      if (event.shiftKey) {
+        setPosition([x / aspect, -y / aspect, 0]);
       } else {
-        setRotation([rotation[0], y / 20, 0]);
+        setRotation([y / aspect, x / aspect, 0]);
       }
-    } else {
-      setPosition([x / aspect, -y / aspect, z]);
-    }
+    },
+    onHover: ({ hovering }) => setScale(hovering ? [1.2, 1.2, 1.2] : [1, 1, 1]),
   });
+
+  const isDragging = false;
 
   return (
     <primitive
       object={box}
       position={position}
       rotation={rotation}
-      {...(bind() as any)}
+      scale={scale}
+      {...bind()}
     >
-      <lineBasicMaterial attach="material" />
+      <lineBasicMaterial
+        attach="material"
+        color={isDragging ? "red" : "white"}
+      />
     </primitive>
   );
 }
