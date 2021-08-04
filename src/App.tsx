@@ -13,12 +13,26 @@ function Boxes() {
   });
 
   const bind = useGesture({
-    onDrag: ({ event, offset: [x, y] }) => {
+    onDrag: ({ event, delta: [x, y] }) => {
       event.stopPropagation();
       if (event.shiftKey) {
-        set({ ...state, rotation: [y / aspect, x / aspect, 0] });
+        set({
+          ...state,
+          rotation: [
+            state.rotation[0] + y / aspect,
+            state.rotation[1] + x / aspect,
+            0,
+          ],
+        });
       } else {
-        set({ ...state, position: [x / aspect, -y / aspect, 0] });
+        set({
+          ...state,
+          position: [
+            state.position[0] + x / aspect,
+            state.position[1] - y / aspect,
+            0,
+          ],
+        });
       }
     },
     onHover: ({ hovering }) =>
