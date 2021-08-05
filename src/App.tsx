@@ -1,50 +1,38 @@
+import { TransformControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { useGesture } from "react-use-gesture";
 import React, { useState } from "react";
+import { useKeyPress } from "./useKeyPress";
 
 function Boxes() {
-  const { size, viewport } = useThree();
-  const aspect = size.width / viewport.width;
-  const [state, set] = useState({
-    scale: [1, 1, 1],
-    position: [0, 0, 0],
-    rotation: [0, 0, 0],
-    config: { friction: 10 },
-  });
+  const [selected, setSelected] = useState(false);
+  const { camera } = useThree();
+  const rotateKey = useKeyPress("e");
+  const scaleKey = useKeyPress("s");
 
-  const bind = useGesture({
-    onDrag: ({ event, delta: [x, y] }) => {
-      event.stopPropagation();
-      if (event.shiftKey) {
-        set({
-          ...state,
-          rotation: [
-            state.rotation[0] + y / aspect,
-            state.rotation[1] + x / aspect,
-            0,
-          ],
-        });
-      } else {
-        set({
-          ...state,
-          position: [
-            state.position[0] + x / aspect,
-            state.position[1] - y / aspect,
-            0,
-          ],
-        });
-      }
-    },
-    onHover: ({ hovering }) =>
-      set({ ...state, scale: hovering ? [1.2, 1.2, 1.2] : [1, 1, 1] }),
-  });
+  function mode() {
+    if (scaleKey) return "scale";
+    if (rotateKey) return "rotate";
+    return "translate";
+  }
 
-  return (
-    <mesh {...state} {...(bind() as any)}>
-      <boxBufferGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="orange" />
-    </mesh>
-  );
+  function mesh() {
+    return (
+      <mesh onClick={() => setSelected(true)}>
+        <boxBufferGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="orange" />
+      </mesh>
+    );
+  }
+
+  if (selected) {
+    return (
+      <TransformControls camera={camera} mode={mode()}>
+        {mesh()}
+      </TransformControls>
+    );
+  } else {
+    return <mesh onClick={() => setSelected(true)}>{mesh()}</mesh>;
+  }
 }
 
 export function App() {
