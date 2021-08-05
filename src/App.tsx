@@ -1,38 +1,53 @@
-import { TransformControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import React, { useState } from "react";
+import React, { useEffect, useRef } from "react";
+import { TransformControls } from "three-stdlib";
 import { useKeyPress } from "./useKeyPress";
 
+const colors = ["red", "orange", "green", "blue", "purple"];
+
 function Boxes() {
-  const [selected, setSelected] = useState(false);
-  const { camera } = useThree();
+  const { camera, gl, scene } = useThree();
+  const boxRefs = useRef<{ [key: string]: any }>({});
   const rotateKey = useKeyPress("e");
   const scaleKey = useKeyPress("s");
+  const transform = useRef<TransformControls>();
 
-  function mode() {
-    if (scaleKey) return "scale";
-    if (rotateKey) return "rotate";
-    return "translate";
+  useEffect(() => {
+    transform.current = new TransformControls(camera, gl.domElement);
+    scene.add(transform.current);
+  }, [camera, scene, gl]);
+
+  useEffect(() => {
+    if (scaleKey) {
+      transform.current?.setMode("scale");
+    } else if (rotateKey) {
+      transform.current?.setMode("rotate");
+    } else {
+      transform.current?.setMode("translate");
+    }
+  }, [scaleKey, rotateKey]);
+
+  function selectBox(index: number) {
+    console.log({ index, ref: boxRefs.current[String(index)], transform });
+    transform.current?.detach();
+    transform.current?.attach(boxRefs.current[String(index)]);
   }
 
-  function mesh() {
+  const meshes = colors.map((color, index) => {
     return (
-      <mesh onClick={() => setSelected(true)}>
+      <mesh
+        key={index}
+        ref={(c) => (boxRefs.current[String(index)] = c)}
+        position={[-2 + index, 0, 0]}
+        onClick={() => selectBox(index)}
+      >
         <boxBufferGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="orange" />
+        <meshStandardMaterial color={color} />
       </mesh>
     );
-  }
+  });
 
-  if (selected) {
-    return (
-      <TransformControls camera={camera} mode={mode()}>
-        {mesh()}
-      </TransformControls>
-    );
-  } else {
-    return <mesh onClick={() => setSelected(true)}>{mesh()}</mesh>;
-  }
+  return <>{meshes}</>;
 }
 
 export function App() {
