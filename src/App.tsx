@@ -6,16 +6,21 @@ import { useKeyPress } from "./useKeyPress";
 const colors = ["red", "orange", "green", "blue", "purple"];
 
 function Boxes() {
-  const { camera, gl, scene } = useThree();
+  const { camera, gl, scene, invalidate } = useThree();
   const boxRefs = useRef<{ [key: string]: any }>({});
   const rotateKey = useKeyPress("e");
   const scaleKey = useKeyPress("s");
   const transform = useRef<TransformControls>();
 
   useEffect(() => {
+    if (transform.current) {
+      scene.remove(transform.current);
+      transform.current.dispose();
+    }
     transform.current = new TransformControls(camera, gl.domElement);
+    transform.current.addEventListener("change", invalidate);
     scene.add(transform.current);
-  }, [camera, scene, gl]);
+  }, [camera, scene, gl, invalidate]);
 
   useEffect(() => {
     if (scaleKey) {
@@ -31,6 +36,7 @@ function Boxes() {
     console.log({ index, ref: boxRefs.current[String(index)], transform });
     transform.current?.detach();
     transform.current?.attach(boxRefs.current[String(index)]);
+    invalidate();
   }
 
   const meshes = colors.map((color, index) => {
@@ -41,7 +47,7 @@ function Boxes() {
         position={[-2 + index, 0, 0]}
         onClick={() => selectBox(index)}
       >
-        <boxBufferGeometry args={[1, 1, 1]} />
+        <boxBufferGeometry args={[0.8, 0.8, 0.8]} />
         <meshStandardMaterial color={color} />
       </mesh>
     );
@@ -52,7 +58,7 @@ function Boxes() {
 
 export function App() {
   return (
-    <Canvas>
+    <Canvas frameloop="demand">
       <color attach="background" args={["black"]} />
       <ambientLight intensity={0.1} />
       <spotLight
